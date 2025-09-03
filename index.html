@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>節約日記</title>
+    <!-- Tailwind CSSの読み込み -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesomeの読み込み（アイコン用） -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* UIの操作性を向上させるためのカスタムスタイル */
+        body {
+            -webkit-user-select: none; /* テキスト選択を無効化 */
+            user-select: none;
+            -webkit-tap-highlight-color: transparent; /* タップ時のハイライトを無効化 */
+        }
+        /* スワイプエリアのスタイル */
+        .swipe-area {
+            touch-action: pan-y; /* 縦方向のスクロールを優先 */
+        }
+        /* ボタンのアクティブ状態のスタイル */
+        .btn-active {
+            transform: scale(0.95);
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 font-sans">
+
+    <div id="app" class="max-w-md mx-auto min-h-screen bg-white shadow-lg">
+        <header class="bg-teal-500 text-white text-center p-4 shadow-md">
+            <h1 class="text-2xl font-bold">節約日記</h1>
+        </header>
+
+        <main class="p-4 md:p-6 space-y-6 swipe-area">
+            <!-- 日付表示とナビゲーション -->
+            <div class="flex items-center justify-between">
+                <button id="prev-day" class="p-2 text-teal-500 rounded-full hover:bg-teal-100 transition-all">
+                    <i class="fas fa-chevron-left fa-lg"></i>
+                </button>
+                <h2 id="current-date" class="text-xl md:text-2xl font-bold text-gray-700"></h2>
+                <button id="next-day" class="p-2 text-teal-500 rounded-full hover:bg-teal-100 transition-all">
+                    <i class="fas fa-chevron-right fa-lg"></i>
+                </button>
+            </div>
+
+            <!-- 累計金額表示 -->
+            <div class="grid grid-cols-2 gap-4 text-center">
+                <div class="bg-teal-50 p-4 rounded-xl shadow">
+                    <p class="text-sm text-teal-700">今月の節約額</p>
+                    <p id="monthly-total" class="text-2xl font-bold text-teal-600">0円</p>
+                </div>
+                <div class="bg-indigo-50 p-4 rounded-xl shadow">
+                    <p class="text-sm text-indigo-700">今までの節約額</p>
+                    <p id="grand-total" class="text-2xl font-bold text-indigo-600">0円</p>
+                </div>
+            </div>
+
+            <!-- 金額入力エリア -->
+            <div class="bg-white p-4 rounded-xl shadow-md space-y-4">
+                <p class="font-semibold text-gray-600 text-center">節約した金額を選んで記録しよう</p>
+                <!-- 金額選択ボタン -->
+                <div class="grid grid-cols-4 gap-2">
+                    <button data-amount="1000" class="amount-btn bg-gray-200 text-gray-700 font-bold py-3 rounded-lg transition-all">1000</button>
+                    <button data-amount="500" class="amount-btn bg-gray-200 text-gray-700 font-bold py-3 rounded-lg transition-all">500</button>
+                    <button data-amount="150" class="amount-btn bg-gray-200 text-gray-700 font-bold py-3 rounded-lg transition-all">150</button>
+                    <button data-amount="100" class="amount-btn bg-gray-200 text-gray-700 font-bold py-3 rounded-lg transition-all">100</button>
+                </div>
+
+                <!-- 数量調整 -->
+                <div class="flex items-center justify-center space-x-6 pt-2">
+                    <button id="decrease-qty" class="w-12 h-12 bg-blue-400 text-white rounded-full text-2xl font-bold transition-transform active:scale-90">-</button>
+                    <div class="text-center">
+                        <p id="selected-amount" class="text-3xl font-bold text-gray-800">1000円</p>
+                        <p id="quantity" class="text-sm text-gray-500">x 1</p>
+                    </div>
+                    <button id="increase-qty" class="w-12 h-12 bg-blue-400 text-white rounded-full text-2xl font-bold transition-transform active:scale-90">+</button>
+                </div>
+
+                <!-- 保存ボタン -->
+                <button id="save-btn" class="w-full bg-teal-500 text-white font-bold py-3 rounded-lg text-lg transition-all hover:bg-teal-600 active:bg-teal-700 disabled:bg-gray-300">
+                    <i class="fas fa-save mr-2"></i>保存する
+                </button>
+            </div>
+            
+            <!-- 当日の記録 -->
+            <div>
+                <h3 class="font-bold text-gray-700 mb-2 border-b-2 border-teal-200 pb-1">今日の記録</h3>
+                <ul id="daily-log" class="space-y-2">
+                    <!-- 記録がここに追加されます -->
+                </ul>
+                <p id="no-log-message" class="text-center text-gray-500 mt-4">まだ記録はありません。</p>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // ----- DOM要素の取得 -----
+            const currentDateEl = document.getElementById('current-date');
+            const prevDayBtn = document.getElementById('prev-day');
+            const nextDayBtn = document.getElementById('next-day');
+            const monthlyTotalEl = document.getElementById('monthly-total');
+            const grandTotalEl = document.getElementById('grand-total');
+            const amountBtns = document.querySelectorAll('.amount-btn');
+            const selectedAmountEl = document.getElementById('selected-amount');
+            const quantityEl = document.getElementById('quantity');
+            const increaseQtyBtn = document.getElementById('increase-qty');
+            const decreaseQtyBtn = document.getElementById('decrease-qty');
+            const saveBtn = document.getElementById('save-btn');
+            const dailyLogEl = document.getElementById('daily-log');
+            const noLogMessage = document.getElementById('no-log-message');
+            const swipeArea = document.querySelector('.swipe-area');
+
+            // ----- 状態管理 -----
+            let currentDate = new Date();
+            let savingsData = {}; // { 'YYYY-MM-DD': [{ amount: 1000, qty: 1, id: '...' }] }
+            let selectedAmount = 1000;
+            let quantity = 1;
+            
+            // スワイプ操作のための変数
+            let touchStartX = 0;
+            let touchEndX = 0;
+
+            // ----- 初期化処理 -----
+            const init = () => {
+                loadData();
+                currentDate.setHours(0, 0, 0, 0); // 時刻をリセットして日付の比較を正確にする
+                updateDisplay();
+                addEventListeners();
+                // 初期選択ボタンのスタイルを設定
+                updateAmountButtons(selectedAmount);
+            };
+            
+            // ----- イベントリスナーの設定 -----
+            const addEventListeners = () => {
+                prevDayBtn.addEventListener('click', () => changeDate(-1));
+                nextDayBtn.addEventListener('click', () => changeDate(1));
+                
+                amountBtns.forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        selectedAmount = parseInt(btn.dataset.amount);
+                        quantity = 1;
+                        updateInputArea();
+                        updateAmountButtons(selectedAmount);
+                    });
+                });
+
+                increaseQtyBtn.addEventListener('click', () => {
+                    quantity++;
+                    updateInputArea();
+                });
+                
+                decreaseQtyBtn.addEventListener('click', () => {
+                    if (quantity > 1) {
+                        quantity--;
+                        updateInputArea();
+                    }
+                });
+                
+                saveBtn.addEventListener('click', saveSaving);
+
+                // スワイプイベント
+                swipeArea.addEventListener('touchstart', handleTouchStart, false);
+                swipeArea.addEventListener('touchmove', handleTouchMove, false);
+                swipeArea.addEventListener('touchend', handleTouchEnd, false);
+            };
+            
+            // ----- データ処理 -----
+            const saveData = () => {
+                localStorage.setItem('savingsAppData', JSON.stringify(savingsData));
+            };
+            
+            const loadData = () => {
+                const data = localStorage.getItem('savingsAppData');
+                savingsData = data ? JSON.parse(data) : {};
+            };
+
+            const saveSaving = () => {
+                const dateKey = formatDate(currentDate);
+                if (!savingsData[dateKey]) {
+                    savingsData[dateKey] = [];
+                }
+                const newEntry = {
+                    amount: selectedAmount,
+                    qty: quantity,
+                    id: Date.now().toString() // 削除用のユニークID
+                };
+                savingsData[dateKey].push(newEntry);
+                saveData();
+                updateDisplay();
+
+                // 保存後にUIを初期状態に戻す
+                quantity = 1;
+                updateInputArea();
+                
+                // 保存成功のアニメーション
+                saveBtn.classList.add('bg-green-500');
+                saveBtn.innerHTML = '<i class="fas fa-check mr-2"></i>保存しました！';
+                setTimeout(() => {
+                    saveBtn.classList.remove('bg-green-500');
+                    saveBtn.innerHTML = '<i class="fas fa-save mr-2"></i>保存する';
+                }, 1500);
+            };
+
+            const deleteSaving = (dateKey, entryId) => {
+                if(savingsData[dateKey]) {
+                    savingsData[dateKey] = savingsData[dateKey].filter(entry => entry.id !== entryId);
+                    if(savingsData[dateKey].length === 0){
+                        delete savingsData[dateKey];
+                    }
+                    saveData();
+                    updateDisplay();
+                }
+            };
+            
+            // ----- UI更新 -----
+            const updateDisplay = () => {
+                displayDate();
+                calculateTotals();
+                renderDailyLog();
+                updateInputArea();
+            };
+
+            const displayDate = () => {
+                const year = currentDate.getFullYear();
+                const month = currentDate.getMonth() + 1;
+                const day = currentDate.getDate();
+                const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][currentDate.getDay()];
+                currentDateEl.textContent = `${year}年 ${month}月${day}日 (${dayOfWeek})`;
+            };
+
+            const calculateTotals = () => {
+                let monthlyTotal = 0;
+                let grandTotal = 0;
+                const currentMonthKey = currentDate.getFullYear() + '-' + ('0' + (currentDate.getMonth() + 1)).slice(-2);
+
+                for (const dateKey in savingsData) {
+                    const totalForDay = savingsData[dateKey].reduce((sum, entry) => sum + (entry.amount * entry.qty), 0);
+                    grandTotal += totalForDay;
+                    if (dateKey.startsWith(currentMonthKey)) {
+                        monthlyTotal += totalForDay;
+                    }
+                }
+
+                monthlyTotalEl.textContent = `${monthlyTotal.toLocaleString()}円`;
+                grandTotalEl.textContent = `${grandTotal.toLocaleString()}円`;
+            };
+
+            const renderDailyLog = () => {
+                const dateKey = formatDate(currentDate);
+                const dailyData = savingsData[dateKey] || [];
+                
+                dailyLogEl.innerHTML = ''; // ログをクリア
+                
+                if (dailyData.length > 0) {
+                    noLogMessage.style.display = 'none';
+                    dailyData.forEach(entry => {
+                        const li = document.createElement('li');
+                        li.className = 'flex items-center justify-between bg-slate-100 p-3 rounded-lg';
+                        
+                        const totalAmount = entry.amount * entry.qty;
+                        li.innerHTML = `
+                            <div>
+                                <p class="font-bold text-gray-800">${totalAmount.toLocaleString()}円</p>
+                                <p class="text-xs text-gray-500">${entry.amount.toLocaleString()}円 x ${entry.qty}</p>
+                            </div>
+                            <button data-id="${entry.id}" class="delete-btn text-red-400 hover:text-red-600 p-2">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        `;
+                        dailyLogEl.appendChild(li);
+                    });
+
+                    // 削除ボタンにイベントリスナーを追加
+                    dailyLogEl.querySelectorAll('.delete-btn').forEach(btn => {
+                        btn.addEventListener('click', (e) => {
+                           const entryId = e.currentTarget.dataset.id;
+                           deleteSaving(dateKey, entryId);
+                        });
+                    });
+
+                } else {
+                    noLogMessage.style.display = 'block';
+                }
+            };
+
+            const updateInputArea = () => {
+                selectedAmountEl.textContent = `${(selectedAmount * quantity).toLocaleString()}円`;
+                quantityEl.textContent = `x ${quantity}`;
+            };
+            
+            const updateAmountButtons = (activeAmount) => {
+                amountBtns.forEach(btn => {
+                    if (parseInt(btn.dataset.amount) === activeAmount) {
+                        btn.classList.remove('bg-gray-200', 'text-gray-700');
+                        btn.classList.add('bg-teal-500', 'text-white', 'ring-2', 'ring-teal-300');
+                    } else {
+                        btn.classList.add('bg-gray-200', 'text-gray-700');
+                        btn.classList.remove('bg-teal-500', 'text-white', 'ring-2', 'ring-teal-300');
+                    }
+                });
+            };
+
+            // ----- 日付操作 -----
+            const changeDate = (days) => {
+                currentDate.setDate(currentDate.getDate() + days);
+                updateDisplay();
+            };
+
+            // ----- ヘルパー関数 -----
+            const formatDate = (date) => {
+                const y = date.getFullYear();
+                const m = ('0' + (date.getMonth() + 1)).slice(-2);
+                const d = ('0' + date.getDate()).slice(-2);
+                return `${y}-${m}-${d}`;
+            };
+            
+            // ----- スワイプ処理 -----
+            const handleTouchStart = (event) => {
+                touchStartX = event.touches[0].clientX;
+            };
+            
+            const handleTouchMove = (event) => {
+                touchEndX = event.touches[0].clientX;
+            };
+            
+            const handleTouchEnd = () => {
+                const diff = touchStartX - touchEndX;
+                // 50px以上のスワイプを検知
+                if (Math.abs(diff) > 50) {
+                    if (diff > 0) {
+                        // 左スワイプ -> 次の日へ
+                        changeDate(1);
+                    } else {
+                        // 右スワイプ -> 前の日へ
+                        changeDate(-1);
+                    }
+                }
+                // リセット
+                touchStartX = 0;
+                touchEndX = 0;
+            };
+
+            // ----- アプリケーションの実行 -----
+            init();
+        });
+    </script>
+</body>
+</html>
+
+
+
