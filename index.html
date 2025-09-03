@@ -15,10 +15,6 @@
             user-select: none;
             -webkit-tap-highlight-color: transparent; /* タップ時のハイライトを無効化 */
         }
-        /* スワイプエリアのスタイル */
-        .swipe-area {
-            touch-action: pan-y; /* 縦方向のスクロールを優先 */
-        }
         /* ボタンのアクティブ状態のスタイル */
         .btn-active {
             transform: scale(0.95);
@@ -33,7 +29,7 @@
             <h1 class="text-2xl font-bold">節約日記</h1>
         </header>
 
-        <main class="p-4 md:p-6 space-y-6 swipe-area">
+        <main class="p-4 md:p-6 space-y-6">
             <!-- 日付表示とナビゲーション -->
             <div class="flex items-center justify-between">
                 <button id="prev-day" class="p-2 text-teal-500 rounded-full hover:bg-teal-100 transition-all">
@@ -111,18 +107,13 @@
             const saveBtn = document.getElementById('save-btn');
             const dailyLogEl = document.getElementById('daily-log');
             const noLogMessage = document.getElementById('no-log-message');
-            const swipeArea = document.querySelector('.swipe-area');
-
+            
             // ----- 状態管理 -----
             let currentDate = new Date();
             let savingsData = {}; // { 'YYYY-MM-DD': [{ amount: 1000, qty: 1, id: '...' }] }
             let selectedAmount = 1000;
             let quantity = 1;
             
-            // スワイプ操作のための変数
-            let touchStartX = 0;
-            let touchEndX = 0;
-
             // ----- 初期化処理 -----
             const init = () => {
                 loadData();
@@ -161,12 +152,9 @@
                 
                 saveBtn.addEventListener('click', saveSaving);
 
-                // スワイプイベント
-                swipeArea.addEventListener('touchstart', handleTouchStart, false);
-                swipeArea.addEventListener('touchmove', handleTouchMove, false);
-                swipeArea.addEventListener('touchend', handleTouchEnd, false);
-
-                // 【修正点1】イベント委任 방식으로 변경
+                // 【修正点】フリック（スワイプ）イベントのリスナーを削除
+                
+                // イベント委任 방식으로 변경
                 // daily-log全体でクリックを監視し、クリックされたのが削除ボタンか判定する
                 dailyLogEl.addEventListener('click', (e) => {
                     const deleteBtn = e.target.closest('.delete-btn');
@@ -222,9 +210,8 @@
                         delete savingsData[dateKey];
                     }
                     saveData();
-                    // 汎用的な更新の代わりに、削除操作に直接関連するUIのみを更新します
-                    calculateTotals(); // 合計金額を再計算して反映
-                    renderDailyLog();  // 今日の記録リストを再描画
+                    // 【修正点】UI全体の更新関数を呼び出し、表示の不整合を防ぐ
+                    updateDisplay();
                 }
             };
             
@@ -325,31 +312,7 @@
                 return `${y}-${m}-${d}`;
             };
             
-            // ----- スワイプ処理 -----
-            const handleTouchStart = (event) => {
-                touchStartX = event.touches[0].clientX;
-            };
-            
-            const handleTouchMove = (event) => {
-                touchEndX = event.touches[0].clientX;
-            };
-            
-            const handleTouchEnd = () => {
-                const diff = touchStartX - touchEndX;
-                // 50px以上のスワイプを検知
-                if (Math.abs(diff) > 50) {
-                    if (diff > 0) {
-                        // 左スワイプ -> 次の日へ
-                        changeDate(1);
-                    } else {
-                        // 右スワイプ -> 前の日へ
-                        changeDate(-1);
-                    }
-                }
-                // リセット
-                touchStartX = 0;
-                touchEndX = 0;
-            };
+            // 【修正点】スワイプ処理の関数をすべて削除
 
             // ----- アプリケーションの実行 -----
             init();
@@ -357,8 +320,4 @@
     </script>
 </body>
 </html>
-
-
-
-
 
