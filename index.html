@@ -211,7 +211,9 @@
                         delete savingsData[dateKey];
                     }
                     saveData();
-                    updateDisplay();
+                    // 汎用的な更新の代わりに、削除操作に直接関連するUIのみを更新します
+                    calculateTotals(); // 合計金額を再計算して反映
+                    renderDailyLog();  // 今日の記録リストを再描画
                 }
             };
             
@@ -349,6 +351,7 @@
     </script>
 </body>
 </html>
+
 
 
 
